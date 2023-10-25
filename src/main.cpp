@@ -10,8 +10,8 @@
 #define ID_MQTT  "laptopPedro_mqtt"     //id mqtt (para identificação de sessão)
 
 //Internet a se conectar
-const char* SSID     = "AlmeidaVisitantes"; // SSID / nome da rede WI-FI que deseja se conectar
-const char* PASSWORD = "#welcometoalmeida!"; // Senha da rede WI-FI que deseja se conectar
+const char* SSID     = ""; // SSID / nome da rede WI-FI que deseja se conectar
+const char* PASSWORD = ""; // Senha da rede WI-FI que deseja se conectar
 
 const char* BROKER_MQTT = "test.mosquitto.org";
 int BROKER_PORT = 1883; // Porta do Broker MQTT
