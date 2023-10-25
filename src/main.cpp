@@ -11,7 +11,7 @@
 
 //Internet a se conectar
 const char* SSID     = ""; // SSID / nome da rede WI-FI que deseja se conectar
-const char* PASSWORD = ""; // Senha da rede WI-FI que deseja se conectar
+const char* PASSWORD = "";  // Senha da rede WI-FI que deseja se conectar
 
 const char* BROKER_MQTT = "test.mosquitto.org";
 int BROKER_PORT = 1883; // Porta do Broker MQTT
@@ -114,8 +114,8 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
   //Mandando status da luminosidade atual sob pedido do MQTT
   else if(msg.equalsIgnoreCase("Controle luminosidade")){
     char msgResposta[35];
-    sprintf(msgResposta, "Controle de luminosidade: %d", valorLuz);
-    MQTT.publish(TOPICO_PUBLISH_CONTROLE, msgResposta);
+    sprintf(msgResposta, "Controle de luminosidade: %d/4095", valorLuz);
+    MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msgResposta);
   }
   
 }
@@ -246,6 +246,14 @@ void medirLuz(int valorLuz){
   } else {
     statusLuz = 4;
   }
+  
+  //Escrevendo mensagem
+  char msg[] = {"Escuro"}; 
+  char msg1[] = {"Pouco escuro"};
+  char msg2[] = {"Iluminado"}; 
+  char msg3[] = {"Claro"};
+  char msg4[] = {"Muito claro"}; 
+
 
   //Comparando se houve mudança, caso não, nada será feito
   if(statusLuzAnterior != statusLuz){
@@ -256,29 +264,24 @@ void medirLuz(int valorLuz){
     switch (statusLuz)
     {
     case 0:
-      char msg[] = {"Escuro"}; //Escrevendo mensagem
       Serial.println(msg); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
       break;
     case 1: 
-      char msg[] = {"Pouco escuro"}; //Escrevendo mensagem
-      Serial.println(msg); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
+      Serial.println(msg1); //Enviando mensagem para a porta Serial
+      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg1); //Publicando no MQTT
       break;
     case 2:
-      char msg[] = {"Iluminado"}; //Escrevendo mensagem
-      Serial.println(msg); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
+      Serial.println(msg2); //Enviando mensagem para a porta Serial
+      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg2); //Publicando no MQTT
       break;
     case 3:
-      char msg[] = {"Claro"}; //Escrevendo mensagem
-      Serial.println(msg); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
+      Serial.println(msg3); //Enviando mensagem para a porta Serial
+      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg3); //Publicando no MQTT
       break;
     case 4:
-      char msg[] = {"Muito claro"}; //Escrevendo mensagem
-      Serial.println(msg); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
+      Serial.println(msg4); //Enviando mensagem para a porta Serial
+      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg4); //Publicando no MQTT
       break;
 
     default:
