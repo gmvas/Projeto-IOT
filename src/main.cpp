@@ -1,13 +1,23 @@
 #include <arduino.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
 #include <PubSubClient.h>
+#include <NTPClient.h>
 
 /* Definicoes para o MQTT */
 #define TOPICO_PUBLISH_CONTROLE        "controle_geral"
 #define TOPICO_SUBSCRIBE_MOVIMENTO     "controle_movimento"
 #define TOPICO_SUBSCRIBE_LUMINOSIDADE  "controle_luminosidade"
+#define TOPICO_MENSAGENS               "mensagens_esp32"
 
 #define ID_MQTT  "laptopPedro_mqtt"     //id mqtt (para identificação de sessão)
+
+
+/*
+* Variáveis para horário via internet
+*/
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
 
 //Internet a se conectar
 const char* SSID     = ""; // SSID / nome da rede WI-FI que deseja se conectar
@@ -117,9 +127,22 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
     sprintf(msgResposta, "Controle de luminosidade: %d/4095", valorLuz);
     MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msgResposta);
   }
-  
-}
 
+  else if (msg.equalsIgnoreCase("Horario"))
+  {
+    String msgStr = timeClient.getFormattedTime(); //Pegando o horario em formato de String
+    char msg[msgStr.length()]; //Criando um array de char do tamanho da String
+    strcpy(msg, msgStr.c_str()); //Copiando conteudo da String para o char array
+    MQTT.publish(TOPICO_MENSAGENS, msg); //Enviando horario para um topico de mensagens geral
+  } 
+
+  else if (msg.equalsIgnoreCase("Horario timeClient"))
+  {
+    Serial.print("Horario via Internet: ");
+    Serial.println(timeClient.getEpochTime());
+    Serial.println(timeClient.getFormattedTime());
+  }
+}
 
 /* Função: reconecta-se ao broker MQTT (caso ainda não esteja conectado ou em caso de a conexão cair)
            em caso de sucesso na conexão ou reconexão, o subscribe dos tópicos é refeito.
@@ -258,7 +281,7 @@ void medirLuz(int valorLuz){
   //Comparando se houve mudança, caso não, nada será feito
   if(statusLuzAnterior != statusLuz){
     Serial.println("Medição de luz:");
-    Serial.print(valorLuz + " - ");
+    Serial.print(" - ");
 
     //Separando e dando diferentes funções para cada Status
     switch (statusLuz)
@@ -312,7 +335,6 @@ void movimentacao(int statusMovimentoAnterior, int statusMovimento){
   }
 }
 
-
 void setup() {
   Serial.begin(9600); //Enviar e receber dados em 9600 baud
   delay(1000);
@@ -331,35 +353,40 @@ void setup() {
 
   // Inicializa a conexao ao broker MQTT
   initMQTT();
+
+  //Initializa tempo via NTP
+  timeClient.begin(); 
+
+  //Fuso horario de UTC -3h
+  timeClient.setTimeOffset(-10800); 
 }
 
 void loop() {
-    // Guardando status anterior
-    statusMovimentoAnterior = statusMovimento; 
+  //Realizando atualizacao do horario
+  if (!timeClient.update()){
+    timeClient.forceUpdate();
+  }
+  
 
-    // Lendo novo status
-    statusMovimento = digitalRead(pirPin); 
+  // Guardando status anterior
+  statusMovimentoAnterior = statusMovimento; 
 
-    //Lendo valor da luz
-    valorLuz = analogRead(pinoLuz); 
+  // Lendo novo status
+  statusMovimento = digitalRead(pirPin); 
 
-    // garante funcionamento das conexões WiFi e ao broker MQTT
-    VerificaConexoesWiFIEMQTT();
+  //Lendo valor da luz
+  valorLuz = analogRead(pinoLuz); 
 
-    // formata a temperatura aleatoria  como string
-    // sprintf(temperatura_str, "%dC", numAleatorio);
+  // garante funcionamento das conexões WiFi e ao broker MQTT
+  VerificaConexoesWiFIEMQTT();
 
-    //  Publica a temperatura
-    //MQTT.publish(TOPICO_PUBLISH_TEMPERATURA, temperatura_str);
+  //Realizando checagem de mudança de status nos sensores
+  movimentacao(statusMovimentoAnterior, statusMovimento);
+  medirLuz(valorLuz);
 
+  // keep-alive da comunicação com broker MQTT
+  MQTT.loop();
 
-    //Realizando checagem de mudança de status nos sensores
-    movimentacao(statusMovimentoAnterior, statusMovimento);
-    medirLuz(valorLuz);
-
-    // keep-alive da comunicação com broker MQTT
-    MQTT.loop();
-
-    // Refaz o ciclo após 2 segundos
-    delay(2000);
+  // Refaz o ciclo após 1 segundos
+  delay(1000);
 }
