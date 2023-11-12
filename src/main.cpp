@@ -55,6 +55,7 @@ void parou(void);
 void piscar(void);
 void medirLuz(int valorLuz);
 void movimentacao(int statusMovimentoAnterior, int statusMovimento);
+void startupGreetings(void);
 
 /*
    Implementações
@@ -335,18 +336,45 @@ void movimentacao(int statusMovimentoAnterior, int statusMovimento){
   }
 }
 
-void setup() {
-  Serial.begin(9600); //Enviar e receber dados em 9600 baud
-  delay(1000);
-  Serial.println("Teste do Smart Kit com ESP32");
-  delay(1000);
+void startupGreetings(void){
+  digitalWrite(led_luz, LOW);
+  digitalWrite(vermelho, LOW);
+  digitalWrite(verde, LOW);
+  delay(150);
+  
+  digitalWrite(led_luz, HIGH);;
+  delay(150);
 
+  digitalWrite(vermelho, HIGH);;
+  delay(150);
+
+  digitalWrite(verde, HIGH);;
+  delay(150);
+
+  digitalWrite(led_luz, LOW);;
+  delay(150);
+
+  digitalWrite(vermelho, LOW);;
+  delay(150);
+
+  digitalWrite(verde, LOW);;
+  delay(150);
+}
+
+void setup() {
   //Configurando os pinos a serem utilizados
   pinMode(pirPin, INPUT);
   pinMode(pinoLuz, INPUT);
   pinMode(verde, OUTPUT);
   pinMode(vermelho, OUTPUT);
   pinMode(led_luz, OUTPUT);
+
+  //Mensagens de inicialização
+  digitalWrite(led_luz, HIGH); //Luz debug 1 - ESP iniciado
+  Serial.begin(9600); //Enviar e receber dados em 9600 baud
+  delay(1000);
+  Serial.println("Teste do Smart Kit com ESP32");
+  delay(1000);  
   
   // Inicializa a conexao wi-fi
   initWiFi();
@@ -354,11 +382,17 @@ void setup() {
   // Inicializa a conexao ao broker MQTT
   initMQTT();
 
+  digitalWrite(vermelho, HIGH); //Luz debug 2 - Internet conectada
+
   //Initializa tempo via NTP
   timeClient.begin(); 
 
   //Fuso horario de UTC -3h
   timeClient.setTimeOffset(-10800); 
+
+  digitalWrite(verde, HIGH); //Luz debug 3 - Horario via internet conectado
+
+  startupGreetings(); //Indicação visual que o ESP inicalizou normalmente
 }
 
 void loop() {
