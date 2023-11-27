@@ -36,6 +36,13 @@ const int pinoLuz = 36; //Pino VP - ADC1 (Input only)
 const int verde = 32; //Pino D32
 const int vermelho = 33; //Pino D33
 const int led_luz = 25; //Pino D25
+const int interruptor = 0; //A definir o Pino ainda
+const int luzQuarto = 0; //A definir o Pino ainda
+const int rele = 0; //A definir o Pino ainda / Controlará o MOSFET do relé
+const int motorCortina = 0; //A defirnir o Pino ainda / Controlará o MOSFET do motorCortina
+
+boolean cortinaRetraida = false; //Valor para controlar a cortina
+int valorControleLuz = 0; //Valor para saber quem possui controle da luz, usuario, horario ou luminosidade || Standart: Usuario
 
 int statusMovimento   = LOW; //Status para ler mudança de movimento
 int statusMovimentoAnterior  = LOW;  
@@ -250,7 +257,7 @@ void piscar(void){
   delay(100);
 }
 
-/* Função: Realizar medição do fotorresistor e interpretar seu valor
+/* Função: Realizar medição do fotorresistor e interpretar seu valor controlando a luz
    Parâmetros: int valorLuz
    Retorno: nenhum
    TODO: Ajustar valores
@@ -290,22 +297,27 @@ void medirLuz(int valorLuz){
     case 0:
       Serial.println(msg); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
+      digitalWrite(luzQuarto, HIGH);
       break;
     case 1: 
       Serial.println(msg1); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg1); //Publicando no MQTT
+      digitalWrite(luzQuarto, HIGH);
       break;
     case 2:
       Serial.println(msg2); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg2); //Publicando no MQTT
+      digitalWrite(luzQuarto, LOW);
       break;
     case 3:
       Serial.println(msg3); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg3); //Publicando no MQTT
+      digitalWrite(luzQuarto, LOW);
       break;
     case 4:
       Serial.println(msg4); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg4); //Publicando no MQTT
+      digitalWrite(luzQuarto, LOW);
       break;
 
     default:
@@ -365,9 +377,13 @@ void setup() {
   //Configurando os pinos a serem utilizados
   pinMode(pirPin, INPUT);
   pinMode(pinoLuz, INPUT);
+  pinMode(interruptor, INPUT);
   pinMode(verde, OUTPUT);
   pinMode(vermelho, OUTPUT);
   pinMode(led_luz, OUTPUT);
+  pinMode(motorCortina, OUTPUT);
+  pinMode(rele, OUTPUT);
+  pinMode(luzQuarto, OUTPUT);
 
   //Mensagens de inicialização
   digitalWrite(led_luz, HIGH); //Luz debug 1 - ESP iniciado
@@ -408,15 +424,26 @@ void loop() {
   // Lendo novo status
   statusMovimento = digitalRead(pirPin); 
 
-  //Lendo valor da luz
-  valorLuz = analogRead(pinoLuz); 
+  //Controlando luz do quarto
+  if(interruptor == HIGH){
+    digitalWrite(luzQuarto, HIGH); //Caso o interruptor de luz esteja ativo, ele será priorizado comparado aos outros parâmetros
+  }
+  else{
+    valorLuz = analogRead(pinoLuz); 
+    medirLuz(valorLuz); //Mudando a luz conforme necessário
+
+  }
+
+  //Funções baseadas por hora - led diurno e cortina
+  if(true){ //TODO: Verificar horário inserido pelo usuário com o atual
+    movimentacao(statusMovimentoAnterior, statusMovimento);
+    if(cortinaRetraida){ //Verifica se a cortina está recolhida
+
+    }
+  }
 
   // garante funcionamento das conexões WiFi e ao broker MQTT
   VerificaConexoesWiFIEMQTT();
-
-  //Realizando checagem de mudança de status nos sensores
-  movimentacao(statusMovimentoAnterior, statusMovimento);
-  medirLuz(valorLuz);
 
   // keep-alive da comunicação com broker MQTT
   MQTT.loop();
