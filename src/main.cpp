@@ -32,14 +32,13 @@ PubSubClient MQTT(espClient); // Instancia o Cliente MQTT passando o objeto espC
 
 /* Definicoes de variaveis para o ESP32 */
 const int pirPin = 35; //Pino D35 (Input Only)
-const int pinoLuz = 36; //Pino VP - ADC1 (Input only)
+const int pinoSensorLuminosidade = 36; //Pino VP - ADC1 (Input only)
 const int verde = 32; //Pino D32
 const int vermelho = 33; //Pino D33
 const int led_luz = 25; //Pino D25
-const int interruptor = 0; //A definir o Pino ainda
-const int luzQuarto = 0; //A definir o Pino ainda
-const int rele = 0; //A definir o Pino ainda / Controlará o MOSFET do relé
-const int motorCortina = 0; //A defirnir o Pino ainda / Controlará o MOSFET do motorCortina
+const int interruptor = 34; //Pino D34 (Input Only)
+const int luzQuarto = 26; //Pino D26 - Esse pino controla o Relé da luz
+const int motorCortina = 27; //Pino D27
 
 boolean cortinaRetraida = false; //Valor para controlar a cortina
 int valorControleLuz = 0; //Valor para saber quem possui controle da luz, usuario, horario ou luminosidade || Standart: Usuario
@@ -376,13 +375,12 @@ void startupGreetings(void){
 void setup() {
   //Configurando os pinos a serem utilizados
   pinMode(pirPin, INPUT);
-  pinMode(pinoLuz, INPUT);
+  pinMode(pinoSensorLuminosidade, INPUT);
   pinMode(interruptor, INPUT);
   pinMode(verde, OUTPUT);
   pinMode(vermelho, OUTPUT);
   pinMode(led_luz, OUTPUT);
   pinMode(motorCortina, OUTPUT);
-  pinMode(rele, OUTPUT);
   pinMode(luzQuarto, OUTPUT);
 
   //Mensagens de inicialização
@@ -429,7 +427,7 @@ void loop() {
     digitalWrite(luzQuarto, HIGH); //Caso o interruptor de luz esteja ativo, ele será priorizado comparado aos outros parâmetros
   }
   else{
-    valorLuz = analogRead(pinoLuz); 
+    valorLuz = analogRead(pinoSensorLuminosidade); 
     medirLuz(valorLuz); //Mudando a luz conforme necessário
 
   }
