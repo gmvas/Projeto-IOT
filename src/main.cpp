@@ -20,8 +20,8 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 
 //Internet a se conectar
-const char* SSID     = ""; // SSID / nome da rede WI-FI que deseja se conectar
-const char* PASSWORD = "";  // Senha da rede WI-FI que deseja se conectar
+const char* SSID     = "Almeida_Colaboradores"; // SSID / nome da rede WI-FI que deseja se conectar
+const char* PASSWORD = "#colab@almeida_adv!";  // Senha da rede WI-FI que deseja se conectar
 
 const char* BROKER_MQTT = "test.mosquitto.org";
 int BROKER_PORT = 1883; // Porta do Broker MQTT
@@ -41,7 +41,9 @@ const int luzQuarto = 26; //Pino D26 - Esse pino controla o Relé da luz
 const int motorCortina = 27; //Pino D27
 
 boolean cortinaRetraida = false; //Valor para controlar a cortina
-int valorControleLuz = 0; //Valor para saber quem possui controle da luz, usuario, horario ou luminosidade || Standart: Usuario
+boolean luzPorPresenca = false; //Variável para controlar o efeito da presença sobre a luz
+boolean acionamentoLuzMQTT = false; //Varável de controle de luz caso usuario acione via app
+boolean luzPorIluminacao = false; //Variavel para contrle de luz por luminosidade
 
 int statusMovimento   = LOW; //Status para ler mudança de movimento
 int statusMovimentoAnterior  = LOW;  
@@ -128,6 +130,19 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
     Serial.println("Lampada desligada via MQTT!");
   }
 
+  else if(msg.equalsIgnoreCase("Ligar luz")){
+    acionamentoLuzMQTT = true;
+    Serial.println("Lampada do quarto ligada via MQTT!");
+    MQTT.publish(TOPICO_MENSAGENS, "Luz do quarto ligada.");
+  }
+
+  else if(msg.equalsIgnoreCase("Desligar luz")){
+    acionamentoLuzMQTT = false;
+    digitalWrite(luzQuarto, LOW);
+    Serial.println("Lampada do quarto desligada via MQTT!");
+    MQTT.publish(TOPICO_MENSAGENS, "Luz do quarto desigada.");
+  }
+
   //Mandando status da luminosidade atual sob pedido do MQTT
   else if(msg.equalsIgnoreCase("Controle luminosidade")){
     char msgResposta[35];
@@ -143,12 +158,36 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
     MQTT.publish(TOPICO_MENSAGENS, msg); //Enviando horario para um topico de mensagens geral
   } 
 
-  else if (msg.equalsIgnoreCase("Horario timeClient"))
+  else if (msg.equalsIgnoreCase("Mudar acionamento presença"))
   {
-    Serial.print("Horario via Internet: ");
-    Serial.println(timeClient.getEpochTime());
-    Serial.println(timeClient.getFormattedTime());
+    if(luzPorPresenca){
+      luzPorPresenca = false;
+      MQTT.publish(TOPICO_MENSAGENS, "Luz não acionará mais por presença!");
+    }
+    else{
+      luzPorPresenca = true;
+      MQTT.publish(TOPICO_MENSAGENS, "Luz agora acionará por presença!");
+    }
   }
+
+  else if (msg.equalsIgnoreCase("Mudar acionamento luminosidade"))
+  {
+    if(luzPorIluminacao){
+      luzPorPresenca = false;
+      MQTT.publish(TOPICO_MENSAGENS, "Luz não acionará mais quando estive escuro!");
+    }
+    else{
+      luzPorIluminacao = true;
+      MQTT.publish(TOPICO_MENSAGENS, "Luz agora acionará quando estiver escuro!");
+    }
+  }
+
+  else if (msg.equalsIgnoreCase("Cortina"))
+  {
+    digitalWrite(motorCortina, HIGH);
+    delay(800);
+    digitalWrite(motorCortina, LOW);
+  } 
 }
 
 /* Função: reconecta-se ao broker MQTT (caso ainda não esteja conectado ou em caso de a conexão cair)
@@ -296,27 +335,37 @@ void medirLuz(int valorLuz){
     case 0:
       Serial.println(msg); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
-      digitalWrite(luzQuarto, HIGH);
+      if(luzPorIluminacao){
+        digitalWrite(luzQuarto, HIGH);
+      }
       break;
     case 1: 
       Serial.println(msg1); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg1); //Publicando no MQTT
-      digitalWrite(luzQuarto, HIGH);
+      if(luzPorIluminacao){
+        digitalWrite(luzQuarto, HIGH);
+      }
       break;
     case 2:
       Serial.println(msg2); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg2); //Publicando no MQTT
-      digitalWrite(luzQuarto, LOW);
+      if(luzPorIluminacao){
+        digitalWrite(luzQuarto, LOW);
+      }
       break;
     case 3:
       Serial.println(msg3); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg3); //Publicando no MQTT
-      digitalWrite(luzQuarto, LOW);
+      if(luzPorIluminacao){
+        digitalWrite(luzQuarto, LOW);
+      }
       break;
     case 4:
       Serial.println(msg4); //Enviando mensagem para a porta Serial
       MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg4); //Publicando no MQTT
-      digitalWrite(luzQuarto, LOW);
+      if(luzPorIluminacao){
+        digitalWrite(luzQuarto, LOW);
+      }
       break;
 
     default:
@@ -414,38 +463,49 @@ void loop() {
   if (!timeClient.update()){
     timeClient.forceUpdate();
   }
-  
 
-  // Guardando status anterior
+  // Gerrenciando status de movimentação no quarto
   statusMovimentoAnterior = statusMovimento; 
-
-  // Lendo novo status
   statusMovimento = digitalRead(pirPin); 
+  movimentacao(statusMovimentoAnterior, statusMovimento);
 
   //Controlando luz do quarto
   if(interruptor == HIGH){
     digitalWrite(luzQuarto, HIGH); //Caso o interruptor de luz esteja ativo, ele será priorizado comparado aos outros parâmetros
   }
   else{
-    valorLuz = analogRead(pinoSensorLuminosidade); 
-    medirLuz(valorLuz); //Mudando a luz conforme necessário
-
-  }
-
-  //Funções baseadas por hora - led diurno e cortina
-  if(true){ //TODO: Verificar horário inserido pelo usuário com o atual
-    movimentacao(statusMovimentoAnterior, statusMovimento);
-    if(cortinaRetraida){ //Verifica se a cortina está recolhida
-
+    if(acionamentoLuzMQTT){ //Checando se o usuario ligou a luz no app
+      digitalWrite(luzQuarto, HIGH);
+    }
+    else{
+      //Fazendo controle de luz por presença caso a opção tenha sido escolhida
+      if(luzPorPresenca){  
+        if(statusMovimento){
+          digitalWrite(luzQuarto, HIGH);
+        }
+        else{
+          digitalWrite(luzQuarto, LOW);
+        }
+      }
     }
   }
 
-  // garante funcionamento das conexões WiFi e ao broker MQTT
+  valorLuz = analogRead(pinoSensorLuminosidade); //Lendo valor de luminosidade local
+  medirLuz(valorLuz); //Mudando a luz conforme necessário
+
+  //Funções baseadas por hora - led diurno e cortina
+  if(false){ //TODO: Verificar horário inserido pelo usuário com o atual
+    if(cortinaRetraida){ //Verifica se a cortina está recolhida
+      //TODO
+    }
+  }
+
+  // Garante funcionamento das conexões WiFi e ao broker MQTT
   VerificaConexoesWiFIEMQTT();
 
   // keep-alive da comunicação com broker MQTT
   MQTT.loop();
 
-  // Refaz o ciclo após 1 segundos
-  delay(1000);
+  // Refaz o ciclo após 0,75 segundos
+  delay(750);
 }
