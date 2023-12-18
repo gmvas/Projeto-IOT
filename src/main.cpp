@@ -425,7 +425,7 @@ void calculaTensao(){
   tensao_rms = tensao_pico/1.4;
   tensao_rms = tensao_rms - 150;
 
-  if(tensao_rms > 100){
+  if(tensao_rms > 80){
     interruptorLuz = true;
   }
   else{
