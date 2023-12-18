@@ -184,7 +184,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
 
   else if (msg.equalsIgnoreCase("Acionamento luminosidade OFF"))
   {
-    luzPorPresenca = false;
+    luzPorIluminacao = false;
     MQTT.publish(TOPICO_MENSAGENS, "Luz não acionará mais quando estive escuro!");
   }
 
@@ -311,12 +311,11 @@ void piscar(void){
    TODO: Ajustar valores
 */
 void medirLuz(int valorLuz){
-  statusLuzAnterior = statusLuz; //Guardando status anterior para comparar
 
   //Interpretando o valor captado pelo Sensor
   if (valorLuz < 200) {
     statusLuz = 0;
-  } else if (valorLuz < 350) {
+  } else if (valorLuz < 300) {
     statusLuz = 1;
   } else if (valorLuz < 700) {
     statusLuz = 2;
@@ -339,40 +338,43 @@ void medirLuz(int valorLuz){
   if(statusLuzAnterior != statusLuz){
     Serial.println("Medição de luz:");
     Serial.print(" - ");
+  }
 
-    //Separando e dando diferentes funções para cada Status
-    switch (statusLuz)
-    {
-    case 0:
-      Serial.println(msg); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
-      if(luzPorIluminacao){
-        isOn = true;
-      }
-      break;
-    case 1: 
-      Serial.println(msg1); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg1); //Publicando no MQTT
-      if(luzPorIluminacao){
-        isOn = true;
-      }
-      break;
-    case 2:
-      Serial.println(msg2); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg2); //Publicando no MQTT
-      break;
-    case 3:
-      Serial.println(msg3); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg3); //Publicando no MQTT
-      break;
-    case 4:
-      Serial.println(msg4); //Enviando mensagem para a porta Serial
-      MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg4); //Publicando no MQTT
-      break;
-
-    default:
-      break;
+  //Separando e dando diferentes funções para cada Status
+  switch (statusLuz)
+  {
+  case 0:
+    Serial.println(msg); //Enviando mensagem para a porta Serial
+    MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg); //Publicando no MQTT
+    if(luzPorIluminacao){
+      isOn = true;
     }
+    break;
+  case 1: 
+    Serial.println(msg1); //Enviando mensagem para a porta Serial
+    MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg1); //Publicando no MQTT
+    if(luzPorIluminacao){
+      isOn = true;
+    }
+    break;
+  case 2:
+    Serial.println(msg2); //Enviando mensagem para a porta Serial
+    MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg2); //Publicando no MQTT
+    if(luzPorIluminacao){
+      isOn = true;
+    }
+    break;
+  case 3:
+    Serial.println(msg3); //Enviando mensagem para a porta Serial
+    MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg3); //Publicando no MQTT
+    break;
+  case 4:
+    Serial.println(msg4); //Enviando mensagem para a porta Serial
+    MQTT.publish(TOPICO_SUBSCRIBE_LUMINOSIDADE, msg4); //Publicando no MQTT
+    break;
+
+  default:
+    break;
   }
 }
 
